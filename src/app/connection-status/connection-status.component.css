@@ -1,0 +1,28 @@
+
+i, h2 {
+    display: inline;
+}
+
+h2 {
+    
+}
+
+.connection-status-container {
+    /* background-color: rgba(0, 0, 0, 0.5); */
+    position: absolute;
+    left: 2rem;
+    bottom: 20px;
+    padding: 1rem;
+}
+
+.connection-status {
+    color: #e87171;;
+}
+
+.active {
+    color: #71e87a;
+}
+
+.pending-status {
+    color: #e8d971;
+}

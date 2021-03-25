@@ -1,0 +1,11 @@
+{
+  "targets": {
+    "exos-d8331": {
+      "hosting": {
+        "exos": [
+          "exos-d8331"
+        ]
+      }
+    }
+  }
+}

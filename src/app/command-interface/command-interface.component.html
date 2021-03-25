@@ -1,0 +1,16 @@
+
+
+<div class="col-md-4 command-interface">
+    <div class="command-interface-container">
+        <div class="logger-container">
+            <div class="logger">
+                <p *ngFor="let log of logs" [innerHtml]="log"></p>
+            </div>
+        </div>
+        <div class="cmd-input-container">
+            <input [(ngModel)]="cmd" type="text" id="cmd-input" (keydown)="onKeyPress($event)">
+            <div class="underline"></div>
+            <div class="underline overlay"></div>
+        </div>
+    </div>
+</div>

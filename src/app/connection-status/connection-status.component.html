@@ -1,0 +1,13 @@
+
+<div class="connection-status-container">
+    <h2>
+        Connection | 
+        <i *ngIf="lastPingTime == 0" class="pending-status">
+            PENDING
+        </i>
+        <i *ngIf="lastPingTime != 0" class="connection-status" [class.active]="connectionStatus">
+            {{ connectionStatus ? "ONLINE" : "OFFLINE" }}
+        </i>
+    </h2>
+    <p>Last Ping: {{ lastPingTime | date:'mediumTime' }}</p>
+</div>

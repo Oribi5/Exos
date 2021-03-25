@@ -1,0 +1,55 @@
+
+
+.command-interface {
+    position: absolute;
+    bottom: 20%;
+    left: 2rem;
+}
+
+#cmd-input {
+    width: 100%;
+    background: none;
+    border: none;
+    height: 30px;
+}
+
+.logger-container {
+    position: relative;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 1rem;
+    height: 200px;
+    overflow: hidden;
+}
+
+.logger {
+    position: absolute;
+    overflow-y: auto;
+    bottom: 10px;
+    /* height: 100%;; */
+    width: 100%;;
+}
+
+.logger p {
+    margin: 0;
+}
+
+
+
+.underline {
+    height: 2px;
+    width: 100%;
+    background: linear-gradient(to right, #3b1984, #5d488b);
+    transition: 0.5s;
+}
+
+.overlay {
+    position: relative;
+    top: -2px;
+    background: linear-gradient(to left, #3b1984, #5d488b);
+    opacity: 0;
+}
+
+input:focus + .underline + .overlay {
+    opacity: 1;
+    
+}
