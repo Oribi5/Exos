@@ -13,6 +13,11 @@ import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { FormsModule } from '@angular/forms';
 import { ConnectionStatusComponent } from './connection-status/connection-status.component';
 import { SketchComponent } from './sketch/sketch.component';
+import { EegChartComponent } from './eeg-chart/eeg-chart.component';
+
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { NgxChartsModule } from '@swimlane/ngx-charts';
+import { HttpClientModule } from '@angular/common/http';
 
 @NgModule({
   declarations: [
@@ -20,7 +25,10 @@ import { SketchComponent } from './sketch/sketch.component';
     CommandInterfaceComponent,
     DashboardComponent,
     ConnectionStatusComponent,
-    SketchComponent
+    SketchComponent,
+    EegChartComponent,
+    
+    
   ],
   imports: [
     BrowserModule,
@@ -29,7 +37,10 @@ import { SketchComponent } from './sketch/sketch.component';
     AngularFirestoreModule,
     AngularFireDatabaseModule,
     NgbModule,
-    FormsModule
+    FormsModule,
+    NgxChartsModule,
+    BrowserAnimationsModule,
+    HttpClientModule 
   ],
   providers: [],
   bootstrap: [AppComponent]

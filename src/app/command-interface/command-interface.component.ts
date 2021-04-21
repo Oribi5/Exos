@@ -1,8 +1,10 @@
 import { THIS_EXPR } from '@angular/compiler/src/output/output_ast';
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { observable, Observable } from 'rxjs';
-import { CommandInterfaceService, ResponseCodes } from '../services/command-interface.service';
-import { DatabaseService } from '../services/database.service';
+import { CommandInterfaceService, ResponseCodes } from '../services/command-interface/command-interface.service';
+import { DatabaseService } from '../services/database/database.service';
+import { LoggerService } from '../services/logger/logger.service';
+import { SignalProcessingService } from '../services/signal-processing/signal-processing.service';
 
 @Component({
   selector: 'command-interface',
@@ -24,7 +26,9 @@ export class CommandInterfaceComponent implements OnInit {
   localCommandTree: CommandBranchInterface[];
 
   constructor(
-    private cis: CommandInterfaceService
+    private cis: CommandInterfaceService,
+    private sps: SignalProcessingService,
+    private logger: LoggerService
   ) {
     this.commandIndex = -1;
     this.localCommandTree = [];
@@ -171,12 +175,16 @@ export class CommandInterfaceComponent implements OnInit {
     if ( commandArray.length > 1 && commandArray[0] == "remote" ) {
       commandArray.shift();
       let remoteCommand = commandArray.join(" ");
-      this.cis.sendCommand(remoteCommand);
+      let cmdObservable = this.cis.sendRemoteCommand(remoteCommand)
+
+      this.log(cmdObservable);
     }
 
-    let cmdObservable = this.cis.sendCommand(this.cmd)
+    if ( commandArray.length >= 1 && commandArray[0] == "load" ) {
+      this.sps.preprocessesData("A01T");
+    }
 
-    this.log(cmdObservable);
+    
       
     this.cmd = "";
   }

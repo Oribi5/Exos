@@ -1,0 +1,40 @@
+
+<div class="chart-container">
+    <!-- <chart [type]="type" [data]="data" [options]="options"></chart> -->
+    <ngx-charts-line-chart
+  [view]="view"
+  [scheme]="colorScheme"
+  [legend]="legend"
+  [showXAxisLabel]="showXAxisLabel"
+  [showYAxisLabel]="showYAxisLabel"
+  [autoScale]="false"
+  [xAxis]="xAxis"
+  [yAxis]="yAxis"
+  [yAxisTicks]="yAxisTicks"
+  [yScaleMin]="-40"
+  [yScaleMax]="40"
+  [xAxisLabel]="xAxisLabel"
+  [yAxisLabel]="yAxisLabel"
+  [timeline]="timeline"
+  [results]="data"
+  >
+</ngx-charts-line-chart>
+</div>
+<div class="chart-container">
+    <!-- <chart [type]="type" [data]="data" [options]="options"></chart> -->
+    <ngx-charts-bar-vertical
+      [view]="view"
+      [scheme]="colorScheme"
+      [legend]="false"
+      [showXAxisLabel]="showXAxisLabel"
+      [showYAxisLabel]="showYAxisLabel"
+      [xAxis]="true"
+      [yAxis]="yAxis"
+      [yScaleMax]="6"
+
+      [xAxisLabel]="xAxisLabel"
+      [yAxisLabel]="yAxisLabel"
+      [results]="data2"
+      >
+    </ngx-charts-bar-vertical>
+</div>

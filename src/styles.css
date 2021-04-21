@@ -57,3 +57,8 @@ textarea:focus, input:focus{
 .log-text.red-text {
     color: #e87171;
 }
+
+.ngx-charts text {
+
+    fill: white;
+}
