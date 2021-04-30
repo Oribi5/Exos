@@ -24,20 +24,20 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     console.log("Initialised");
 
-    Promise.all([
-      this.mls.loadModel(),
-      this.http.get("./assets/resources/data/A01T/json/A01T-training-S100.json").toPromise()
-    ])
-      .then(result => {
-        let [model, data] = result;
+    // Promise.all([
+    //   this.mls.loadModel(),
+    //   this.http.get("./assets/resources/data/A01T/json/A01T-training-S100.json").toPromise()
+    // ])
+    //   .then(result => {
+    //     let [model, data] = result;
 
-        console.log(model);
-        console.log(data);
+    //     console.log(model);
+    //     console.log(data);
 
+    //     // let tensor =  this.mls.getTensorFromData();
 
-
-        let prediction = model.predict((data as any).data[0].inputs).print();
-      })
+    //     // let prediction = model.predict((data as any).data[0].inputs).print();
+    //   })
 
     // this.mls.demo()
     //   .then((data: any) => {

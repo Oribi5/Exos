@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import * as FFT from 'fft-js';
 import { SafeUrl } from '@angular/platform-browser';
 import { train } from '@tensorflow/tfjs-core';
+import { MachineLearningService } from '../machine-learning/machine-learning.service';
 // import * as transform from 'transform';
 
 // import 'rxjs/add/operator/toPromise';
@@ -27,7 +28,7 @@ export class SignalProcessingService {
   ) {
     this.channels = [];
     this.rawChannels = [];
-    this.dataLoaded = this.loadData();
+    // this.dataLoaded = this.loadData();
 
 
   }
@@ -153,195 +154,238 @@ export class SignalProcessingService {
     })
   }
 
-  preprocessesData(id: string) {
-
-    // this.downloadJSON({test: false}, "test")
-    // return;
+  async preprocessesData(id: string, mls: MachineLearningService, ctx: any) {
 
     console.log(id);
 
     // Load data files
     let root = `assets/resources/data/${id}`;
 
-    Promise.all([
-      this.http.get(`${root}/eeg.csv`, 
-        {responseType: "text"}).toPromise()
+    const eegData = await Promise.all([
+      this.http.get(`${root}/eeg.csv`,
+        { responseType: "text" }).toPromise()
         .then(result => {
           console.log("EEG LOADED");
           return result;
         }),
 
-      this.http.get(`${root}/stim-code.csv`, 
-        {responseType: "text"}).toPromise()
-        .then(result => {
+      this.http.get(`${root}/stim-code.csv`,
+        { responseType: "text" }).toPromise()
+        .then(result_1 => {
           console.log("STIM CODES LOADED");
-          return result;
+          return result_1;
         }),
 
-      this.http.get(`${root}/stim-pos.csv`, 
-        {responseType: "text"}).toPromise()
-        .then(result => {
+      this.http.get(`${root}/stim-pos.csv`,
+        { responseType: "text" }).toPromise()
+        .then(result_2 => {
           console.log("STIM POS LOADED");
-          return result;
+          return result_2;
         }),
-    ])
-    .then(result => {
-      // console.log(result);
-      let  [eeg_txt, stimCodes_txt, stimPositions_txt] = result;
+    ]);
+    let [eeg_txt, stimCodes_txt, stimPositions_txt] = eegData;
 
-      let stimCodes = stimCodes_txt.split(",").map(val => parseFloat(val)),
-          stimPositions = stimPositions_txt.split(",").map(val => parseFloat(val)),
-          eeg = eeg_txt.split("\n")
-            .map(line => 
-                line.split(",").map(str => parseFloat(str))
-            );
-      
-      // Transpose EEG's 22 (cut 23, 24, & 25 EOG channels)
-      let channels = [];
-      for ( let i=0; i<22; i++ ) {
-        channels.push(eeg.map(channels => channels[i]))
-      }
+    let stimCodes = stimCodes_txt.split(",").map(val => parseFloat(val)),
+      stimPositions = stimPositions_txt.split(",").map(val_1 => parseFloat(val_1)),
+      eeg = eeg_txt.split("\n")
+        .map(line => line.split(",").map(str => parseFloat(str))
+        );
 
-      eeg = channels;
-      channels = null;
+    // Transpose EEG's 22 (cut 23, 24, & 25 EOG channels)
+    let channels = [];
+    for (let i = 0; i < 22; i++) {
+      channels.push(eeg.map(channels_1 => channels_1[i]));
+    }
 
-      console.log(stimCodes, stimPositions);
-      console.log(eeg);
+    eeg = channels;
+    channels = null;
 
-      let stimData: Stim[] = stimCodes.map((code, index) => {
-        return {
-          code: code,
-          position: stimPositions[index]
-        }
-      });
+    console.log(stimCodes, stimPositions);
+    console.log(eeg);
 
-      // --------------- Configure data.js ---------------
-      let dataObject = {
-        name: id,
-        date: Date.now(),
-        duration: eeg[0].length / this.SAMPLING_RATE,
-        eeg: eeg,
-        stim: stimData
-
+    let stimData: Stim[] = stimCodes.map((code, index) => {
+      return {
+        code: code,
+        position: stimPositions[index]
       };
+    });
 
-      console.log(dataObject);
+    // --------------- Configure data.js ---------------
+    let dataObject = {
+      name: id,
+      date: Date.now(),
+      duration: eeg[0].length / this.SAMPLING_RATE,
+      eeg: eeg,
+      stim: stimData
+    };
 
-      // this.downloadJSON(dataObject, `${id}-eeg`);
+    // this.downloadJSON(dataObject, `${id}-eeg`);
+    // --------------- Configure data-training.js ---------------
+    let lastSplicePosition = 0;
+    let lastSpliceIndex = -1;
 
-      // --------------- Configure data-training.js ---------------
+    let set = 0;
 
-      
-      let lastSplicePosition = 0;
-      let lastSpliceIndex = -1;
+    // let data = [];
+    let trainingData = [];
 
-      let set = 0;
+    let history = [];
 
-      for ( let i=0; i<stimData.length; i++ ) {
-        if ( stimData[i].code == EventType.StartOfTrial ) {
+    let bounds = Array(22);
+    for ( let i=0; i<bounds.length; i++ ) {
+      bounds[i] = {
+        min: Infinity,
+        max: -Infinity
+      };
+    }
 
-          let stims = stimCodes.slice(lastSpliceIndex+1, i);
-          
+    console.log(bounds);
 
-          // Filter
-          let validTrial = 
-            [
-              EventType.CueOnset_Unknown,
-              EventType.CueOnset_Tongue,
-              EventType.CueOnset_Foot,
-              EventType.RejectTrial
-            ].reduce((acc, val) => {
-              return !stims.includes(val) && acc;
-            }, true);
-          
-          if ( validTrial ) {
-            set++;
+    // function drawToCanvas(sample) {
+    //   // let max = sample.inputs.reduce((acc, val) => acc > val ? acc : val, 0);
+    //   // let max = 5;
+    //   // console.log(max);
 
-            //Extract data from 3 - 5 seconds
-            let startOffset = 3000;
-            let length = 2000;
+    //   for ( let i=0; i<22*36; i++ ) {
+    //     let y = Math.floor(i / 36);
+    //     let x = i % 36;
 
-            let startIndex = lastSplicePosition + startOffset;
+    //     // console.log(x, y);
 
-            let eegSegment = eeg.map(channel => channel.slice(startIndex, startIndex + length));
-            console.log("Length: "+(eegSegment[0].length));
-            console.log(stims);
+    //     ctx.beginPath();
+    //     // ctx.lineWidth = "6";
+    //     // ctx.strokeStyle = "red";
+    //     let colorValue = sample[i] * 255 / 5;
+    //     // console.log(colorValue);
+    //     ctx.fillStyle = `rgb(${colorValue}, ${colorValue}, ${colorValue})`;
+    //     ctx.fillRect(10*x, 10*y, 10, 10);
+    //   }
+    // }
 
-            let trainingData = [];
 
-            for ( let j = 0; j<eegSegment[0].length - this.FREQUENCY_WINDOW; j++) {
-              let obj = this;
+    for (let i_1 = 0; i_1 < stimData.length; i_1++) {
+      if (stimData[i_1].code == EventType.StartOfTrial) {
 
-              let inputs = eegSegment
-                .map(channel => channel.slice(j, j+this.FREQUENCY_WINDOW))
-                .map(channel => obj.getFrequencies(channel).map(datum => datum.value))
-                .reduce((acc, val) => [...acc, ...val], [])
+        let stims = stimCodes.slice(lastSpliceIndex + 1, i_1);
 
-              // Concat channels to singular input array
-              // let inputs = [...frequencies];
-              let outputs: number[];
+        // Filter
+        let validTrial = [
+          EventType.CueOnset_Unknown,
+          // EventType.CueOnset_Tongue,
+          // EventType.CueOnset_Foot,
+          EventType.RejectTrial
+        ].reduce((acc, val_2) => {
+          return !stims.includes(val_2) && acc;
+        }, true);
 
-              if ( stims.includes(EventType.CueOnset_Left) ) {
-                outputs = [1, 0, 0]; // Left 
-                // console.log("Left");
-              } else if ( stims.includes(EventType.CueOnset_Right) ) {
-                outputs = [0, 1, 0]; // Right
-                // console.log("Right");
-              } else {
-                outputs = [0, 0, 1]; // Idle
-                // console.log("Idle");
-              }
+        if (validTrial) {
+          set++;
 
-              trainingData.push({inputs, outputs});
-              // console.log(outputs);
-              // console.log(trainingData);
+          //Extract data from 3 - 5 seconds
+          let startOffset = 3000;
+          let length = 2000;
 
-              // console.log((i+1) + " / " + (eegSegment[0].length - this.FREQUENCY_WINDOW) );
+          let startIndex = lastSplicePosition + startOffset;
 
-              if (i == 0)
-                console.log(inputs)
+          let eegSegment = eeg.map(channel => channel.slice(startIndex, startIndex + length));
+          console.log("Length: " + (eegSegment[0].length));
+          console.log(stims);
 
-              // let input = 
+          // let trainingData = [];
+
+          for (let j = 0; j < eegSegment[0].length - this.FREQUENCY_WINDOW; j+=20) {
+            let obj = this;
+
+            let inputs = eegSegment
+              .map(channel => channel.slice(j, j + this.FREQUENCY_WINDOW))
+              .map((channel, index) => obj.getFrequencies(channel).map(datum => {
+                // Update channel bounds
+                let val = datum.value;
+                bounds[index].min = Math.min(bounds[index].min, val);
+                bounds[index].max = Math.max(bounds[index].max, val);
+
+                return val;
+              }))
+              .reduce((acc_1, val_3) => [...acc_1, ...val_3], []);
+
+            // Concat channels to singular input array
+            // let inputs = [...frequencies];
+            let outputs: number[];
+
+            if (stims.includes(EventType.CueOnset_Left)) {
+              outputs = [1, 0, 0, 0, 0]; // Left 
+            } else if (stims.includes(EventType.CueOnset_Right)) {
+              outputs = [0, 1, 0, 0, 0]; // Right
+            } else if (stims.includes(EventType.CueOnset_Foot)) {
+              outputs = [0, 0, 1, 0, 0]; // Foot
+            } else if (stims.includes(EventType.CueOnset_Tongue)) {
+              outputs = [0, 0, 0, 1, 0]; // Tongue
+            } else {
+              outputs = [0, 0, 0, 0, 1]; // Idle
             }
 
-            this.downloadJSON({
-              name: id,
-              set,
-              data: trainingData
-            }, `${id}-training-S${set}`);
+            // drawToCanvas(inputs);
 
-            // return;
-
-            // remove to traverse all data
-            // break;
+            trainingData.push({ inputs, outputs });
           }
-
-          lastSplicePosition = stimData[i].position;
-          lastSpliceIndex = i;
-
         }
-        console.log(Math.round(100*(i+1)/stimData.length) + "% Complete");
+
+        lastSplicePosition = stimData[i_1].position;
+        lastSpliceIndex = i_1;
+
       }
+      console.log(Math.round(100 * (i_1 + 1) / stimData.length) + "% Complete");
+    }
 
-      // console.log(eegSegme);
+    console.log(bounds);
 
-      // let trainingObject ={
-      //   name: id,
-      //   data: trainingData
-      // }
+    trainingData.forEach(set => {
+      set.inputs = set.inputs.map((val, index) => {
+        let i = Math.floor(index / 36); 
+        // console.log(i);
+        return (val - bounds[i].min)/bounds[i].max;
+      });
+    });
 
-      // console.log(trainingObject);
+    console.log(trainingData)
 
-      // this.downloadJSON(dataObject, `${id}-eeg`);
-      // console.log(JSON.stringify(trainingObject));
-      // this.downloadJSON(trainingObject, `${id}-training`);
+    // function shuffle(array) {
+    //   let currentIndex = array.length, temporaryValue, randomIndex;
+    
+    //   // While there remain elements to shuffle...
+    //   while (0 !== currentIndex) {
+    
+    //     // Pick a remaining element...
+    //     randomIndex = Math.floor(Math.random() * currentIndex);
+    //     currentIndex -= 1;
+    
+    //     // And swap it with the current element.
+    //     temporaryValue = array[currentIndex];
+    //     array[currentIndex] = array[randomIndex];
+    //     array[randomIndex] = temporaryValue;
+    //   }
+    
+    //   return array;
+    // }
 
-    })
-    .catch(error => {
-      // console.error
-      console.error("Error not found :(");
-      console.error(error);
-    })
+    // shuffle(trainingData);
+
+    let trainingFraction = 0.8;
+    let fractionIndex = Math.round(trainingFraction * trainingData.length);
+
+    let training = trainingData.slice(0, fractionIndex);
+    let validation = trainingData.slice(fractionIndex, trainingData.length);
+
+    await mls.train(training, validation, (log) => {
+      // console.log("Working!");
+      history.push(log);
+    });
+    
+
+    // await mls.saveModel("model");
+    console.log(history);
+
+    return history;
   }
 
   downloadJSON(object: any, name: string = "download") {

@@ -4,6 +4,7 @@ import { observable, Observable } from 'rxjs';
 import { CommandInterfaceService, ResponseCodes } from '../services/command-interface/command-interface.service';
 import { DatabaseService } from '../services/database/database.service';
 import { LoggerService } from '../services/logger/logger.service';
+import { MachineLearningService } from '../services/machine-learning/machine-learning.service';
 import { SignalProcessingService } from '../services/signal-processing/signal-processing.service';
 
 @Component({
@@ -28,6 +29,7 @@ export class CommandInterfaceComponent implements OnInit {
   constructor(
     private cis: CommandInterfaceService,
     private sps: SignalProcessingService,
+    private mls: MachineLearningService,
     private logger: LoggerService
   ) {
     this.commandIndex = -1;
@@ -159,6 +161,9 @@ export class CommandInterfaceComponent implements OnInit {
 
   execute(): void {
 
+    var c = document.getElementById("myCanvas") as any;
+        var ctx = c.getContext("2d");
+
     this.commandIndex = -1;
 
     if ( this.cmd == "clear" ) {
@@ -181,10 +186,22 @@ export class CommandInterfaceComponent implements OnInit {
     }
 
     if ( commandArray.length >= 1 && commandArray[0] == "load" ) {
-      this.sps.preprocessesData("A01T");
+      let ids = commandArray.splice(1, commandArray.length)
+      for ( let id of ids ) {
+        console.log(id);
+        this.sps.preprocessesData(id, this.mls, ctx);
+      }
     }
 
-    
+    if ( commandArray.length >= 1 && commandArray[0] == "train" ) {
+      if ( commandArray.length >= 2 ) {
+        // this.mls.fullTrainingSequence(commandArray[1] == "fromLoad");
+      } else {
+        
+        this.mls.fullTrainingSequence(ctx);
+      }
+      
+    }
       
     this.cmd = "";
   }

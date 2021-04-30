@@ -34,7 +34,9 @@
               "node_modules/bootstrap/dist/css/bootstrap.min.css",
               "src/styles.css"
             ],
-            "scripts": []
+            "scripts": [
+              "node_modules/numeric/numeric-1.2.6.min.js"
+            ]
           },
           "configurations": {
             "production": {
