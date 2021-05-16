@@ -193,9 +193,18 @@ export class CommandInterfaceComponent implements OnInit {
       }
     }
 
+    if ( commandArray.length >= 1 && commandArray[0] == "stop" ) {
+      this.mls.model.stopTraining = true;
+    }
+
     if ( commandArray.length >= 1 && commandArray[0] == "train" ) {
       if ( commandArray.length >= 2 ) {
         // this.mls.fullTrainingSequence(commandArray[1] == "fromLoad");
+        let name = commandArray[1];
+        let skips = parseInt(commandArray[2]);
+        let notes = commandArray[3];
+        this.mls.fullTrainingSequence(ctx, name, skips, notes);
+
       } else {
         
         this.mls.fullTrainingSequence(ctx);

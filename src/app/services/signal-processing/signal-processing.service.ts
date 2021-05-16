@@ -5,6 +5,7 @@ import * as FFT from 'fft-js';
 import { SafeUrl } from '@angular/platform-browser';
 import { train } from '@tensorflow/tfjs-core';
 import { MachineLearningService } from '../machine-learning/machine-learning.service';
+// import { saveAs } from 'file-saver/FileSaver';
 // import * as transform from 'transform';
 
 // import 'rxjs/add/operator/toPromise';
@@ -154,7 +155,7 @@ export class SignalProcessingService {
     })
   }
 
-  async preprocessesData(id: string, mls: MachineLearningService, ctx: any) {
+  async preprocessesData(id: string, mls: MachineLearningService, ctx: any, skips:number=50) {
 
     console.log(id);
 
@@ -293,9 +294,23 @@ export class SignalProcessingService {
 
           // let trainingData = [];
 
-          for (let j = 0; j < eegSegment[0].length - this.FREQUENCY_WINDOW; j+=20) {
+          for (let j = 0; j < eegSegment[0].length - this.FREQUENCY_WINDOW; j+=skips) {
             let obj = this;
 
+            // console.log(eegSegment);
+
+            // let inputs = eegSegment
+            //   .map(channel => channel.slice(j, j + this.FREQUENCY_WINDOW))
+            //   .map((channel, index) => obj.generateGramianAngularFields(channel))
+            //   .reduce((acc, val) => [...acc, ...val], []);
+
+            // inputs = [...inputs];
+            
+            // console.log(input);
+
+            // this.generateGramianAngularFields(eegSegment[0]);
+
+            // return Promise.resolve();;
             let inputs = eegSegment
               .map(channel => channel.slice(j, j + this.FREQUENCY_WINDOW))
               .map((channel, index) => obj.getFrequencies(channel).map(datum => {
@@ -386,6 +401,40 @@ export class SignalProcessingService {
     console.log(history);
 
     return history;
+  }
+
+  generateGramianAngularFields(signal, summation: boolean = true) {
+    // normalise between -1 & 1
+    let [min, max] = signal.reduce((acc, val) => {
+      let [min, max] = acc;
+      min = Math.min(min, val);
+      max = Math.max(max, val);
+      return [min, max]
+
+    }, [Infinity, -Infinity]);
+    
+    // Normalise and convert to angle in one function
+    let polar = signal.map(val => {
+      let normalisedValue = -1+2*(val-min)/(max - min);
+      return Math.acos(normalisedValue);
+    });
+    
+    let trigFn = summation ? Math.cos : Math.sin;
+    
+    let gramMatrix = [];
+    for ( let i=0; i<polar.length; i++ ) {
+      let row = [];
+      for ( let j=0; j<polar.length; j++ ) {
+        row[j] = summation ?
+          Math.cos(polar[i] + polar[j]) : 
+          Math.sin(polar[i] - polar[j]);
+      }
+      gramMatrix[i] = row;
+    }
+
+    // console.log(gramMatrix);
+
+    return gramMatrix;
   }
 
   downloadJSON(object: any, name: string = "download") {
