@@ -19,34 +19,9 @@ export class MachineLearningService {
     private http: HttpClient,
     private sps: SignalProcessingService,
   ) {
-    // console.log(bci);
-
-    // let bci: any;
     console.log(bci);
-    // console.log(tfvis);
-
-    // var a = [
-    //   [-1, -1],
-    //   [1, 1]
-    // ];
-    
-    // var b = [
-    //   [-1, 1],
-    //   [1, -1]
-    // ];
-    
-    // var csp = bci.cspLearn(a, b);
-    // console.log(csp);
-    
-    // var ap = csp.project(a, 2);
-    // var bp = csp.project(b, 2);
-    
-    // console.log(ap);
   }
 
-  // loadModel() {
-
-  // }
 
   async saveModel(name:string = "my-model-1") {
     return await this.model.save('localstorage://'+name);
@@ -142,7 +117,11 @@ export class MachineLearningService {
   
   }
 
-  generateModel() {
+  createDenseModel() {
+
+  }
+
+  createConvolutionalModel() {
     // return this.generateModel2();
     const model = tf.sequential();
     
@@ -283,20 +262,6 @@ export class MachineLearningService {
     return model;
   }
 
-  async loadModel(): Promise<any> {
-
-    // let loadedModel = await tf.loadLayersModel('localstorage://my-model-1');
-    // this.model = loadedModel as tf.Sequential;
-
-    // const optimizer = tf.train.adam();
-    // this.model.compile({
-    //   optimizer: optimizer,
-    //   loss: 'categoricalCrossentropy',
-    //   metrics: ['accuracy'],
-    // });
-    // return this.model;
-  }
-
   predict(data) {
 
   }
@@ -306,7 +271,7 @@ export class MachineLearningService {
     let subjects = ["A01T", "A02T", "A03T", "A04T", "A05T", "A06T", "A07T", "A08T", "A09T"];
     subjects = [`A0${id}T`];
 
-    this.generateModel();
+    this.createConvolutionalModel();
     // return;
 
     let history = [];
@@ -476,7 +441,7 @@ export class MachineLearningService {
     }
     // let onTrainEnd = ()
     if ( typeof this.model === "undefined" )
-      this.generateModel();
+      this.createConvolutionalModel();
   
     return this.model.fit(trainXs, trainYs, {
       batchSize: 32,

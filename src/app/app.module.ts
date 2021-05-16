@@ -18,6 +18,9 @@ import { EegChartComponent } from './eeg-chart/eeg-chart.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { NgxChartsModule } from '@swimlane/ngx-charts';
 import { HttpClientModule } from '@angular/common/http';
+import { VisualisationComponent } from './visualisation/visualisation.component';
+import { MachineLearningComponent } from './machine-learning/machine-learning.component';
+import { InformaticsComponent } from './informatics/informatics.component';
 
 @NgModule({
   declarations: [
@@ -27,6 +30,9 @@ import { HttpClientModule } from '@angular/common/http';
     ConnectionStatusComponent,
     SketchComponent,
     EegChartComponent,
+    VisualisationComponent,
+    MachineLearningComponent,
+    InformaticsComponent,
     
     
   ],
