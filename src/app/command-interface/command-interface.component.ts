@@ -1,11 +1,13 @@
 import { THIS_EXPR } from '@angular/compiler/src/output/output_ast';
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { observable, Observable } from 'rxjs';
+import { CommandBranchInterface, CommandMethodInterface, CommandNameSpaceInterface, CommandTreeService, CommandType } from '../command-tree.service';
 import { CommandInterfaceService, ResponseCodes } from '../services/command-interface/command-interface.service';
 import { DatabaseService } from '../services/database/database.service';
 import { LoggerService } from '../services/logger/logger.service';
 import { MachineLearningService } from '../services/machine-learning/machine-learning.service';
 import { SignalProcessingService } from '../services/signal-processing/signal-processing.service';
+// import { CommandBranchInterface, CommandTree } from './command-tree';
 
 @Component({
   selector: 'command-interface',
@@ -24,80 +26,25 @@ export class CommandInterfaceComponent implements OnInit {
 
   commandIndex: number;
 
-  localCommandTree: CommandBranchInterface[];
+  // command: CommandBranchInterface[];
 
   constructor(
     private cis: CommandInterfaceService,
     private sps: SignalProcessingService,
     private mls: MachineLearningService,
-    private logger: LoggerService
+    private logger: LoggerService,
+    private commandTree: CommandTreeService
   ) {
     this.commandIndex = -1;
-    this.localCommandTree = [];
+    // this.localCommandTree = [];
+
   }
 
   ngOnInit(): void {
 
     // Use index of array to indicate the number of parameters
     
-    this.localCommandTree = [
-      {
-        type: CommandType.COMMAND,
-        methods: ["led"],
-        expected: [
-          {
-            name: "state",
-            numberOfParameters: 1,
-            description: "Sets the BUILTIN_LED state of the ESP8266 module ['e.g. on, 1, true'].", 
-          }
-        ]
-      },
-      {
-        type: CommandType.COMMAND,
-        methods: ["power"],
-        expected: [
-          {
-            name: "", 
-            numberOfParameters: 0,
-            description: "Returns power state.", 
-          },
-          {
-            name: "state", 
-            numberOfParameters: 1,
-            description: "Sets the BUILTIN_LED state of the ESP8266 module ['e.g. active, 1,'].", 
-          }
-        ]
-      },
-      {
-        type: CommandType.COMMAND,
-        methods: ["database", "db"],
-        expected: [
-          {
-            name: "init", 
-            numberOfParameters: 1,
-            description: "Initialised Wifi - Firebase Connection (Note this is automatic).", 
-            warning: "Connection will temporarily be lost.",
-          },
-          {
-            name: "status", 
-            numberOfParameters: 1,
-            description: "Returns Connection Status.", 
-          },
-          {
-            name: "ip", 
-            numberOfParameters: 1,
-            description: "Returns Connection IP Address.", 
-          },
-          {
-            name: "disconnect", 
-            numberOfParameters: 1,
-            description: "Disconnects ESP8266 from current wifi connection.", 
-            warning: "You will no longer be able to remotely control the EXO-S System until ESP8266 system restart.",
-          }
-        ]
-      },
-
-    ];
+    // this.localCommandTree = CommandTree;
     
   }
 
@@ -127,23 +74,84 @@ export class CommandInterfaceComponent implements OnInit {
     }
   }
 
+  executeMethod(): void {
+    let cmdArray = this.cmd.split(" ");
+    let root = this.commandTree.CommandTree
+
+    for ( let i=0; i<cmdArray.length; i++ ) {
+      let str = cmdArray[i];
+      let subDirectory = root.filter(branch => branch.name.includes(str));
+
+      console.log(subDirectory)
+      
+      if ( subDirectory.length == 0) return;
+
+      switch ( subDirectory[0].type ) {
+        case CommandType.NAMESPACE: root = (subDirectory[0] as CommandNameSpaceInterface).dir; break;
+        case CommandType.COMMAND: {
+          let args = cmdArray.slice(i+1, cmdArray.length)
+          let methods = (subDirectory[0] as CommandMethodInterface)
+
+          console.log("args");
+          console.log(args);
+          console.log(methods);
+
+          let identicalMethods = methods.expected.filter(method => method.params.length == args.length);
+
+          console.log(identicalMethods)
+
+          if ( identicalMethods.length != 0 )
+            identicalMethods[0].callback(args);
+          
+          // let arguments = 
+        }
+      }
+    }
+
+    return;
+  }
+
+
   autoFill(): void {
     if ( this.cmd == "" ) return;
 
+    //Navigate to subdirectory
+    let root = this.commandTree.CommandTree
+    let cmdArray = this.cmd.split(" ");
+    let partialComplete = cmdArray.pop();
+
+    if (partialComplete.length == 0) return;
+
+    for ( let i=0; i<cmdArray.length; i++ ) {
+      let str = cmdArray[i];
+      let subDirectory = root.filter(branch => branch.name.includes(str));
+
+      console.log(subDirectory)
+      
+      if ( subDirectory.length == 0 && subDirectory[0].type == CommandType.NAMESPACE) return;
+
+      root = (subDirectory[0] as CommandNameSpaceInterface).dir;
+
+    }
+    
+
+    // Find closest partial match
     let partialStringMatch = (partialString: string, fullString: string): boolean => {
       return partialString === fullString.substr(0, partialString.length);
     }
 
+    console.log(root);
 
-    let possibilities = this.localCommandTree
+    let possibilities = root
       .reduce((acc, branch) => {
-        return [...acc, ...branch.methods];
+        return [...acc, ...branch.name];
       }, [] as string[])
-      .filter(str => partialStringMatch(this.cmd, str))
+      .filter(str => partialStringMatch(partialComplete, str))
       .sort((str1, str2) => str1.length - str2.length);
     
     if ( possibilities.length > 0 ) {
-      this.cmd = possibilities[0];
+      cmdArray.push(possibilities[0]);
+      this.cmd = cmdArray.join(" ");
     }
   }
 
@@ -160,6 +168,8 @@ export class CommandInterfaceComponent implements OnInit {
   }
 
   execute(): void {
+
+    this.executeMethod()
 
     var c = document.getElementById("myCanvas") as any;
         var ctx = c.getContext("2d");
@@ -237,24 +247,6 @@ export class CommandInterfaceComponent implements OnInit {
 
 }
 
-export enum CommandType {
-  "COMMAND" = 0,
-  "NAMESPACE"
-}
 
-// export interface CommandTreeInterface {
 
-// }
 
-export interface CommandBranchInterface {
-  type: CommandType,
-  methods: string[],
-  expected: CommandParameterInterface[]
-}
-
-export interface CommandParameterInterface {
-  name: string,
-  numberOfParameters: number,
-  description: string,
-  warning?: string
-}
