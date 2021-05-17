@@ -4,6 +4,7 @@ import { EegSimulationService } from './eeg-simulation.service';
 import { LocalStorageService } from './local-storage.service';
 import { CommandInterfaceService } from './services/command-interface/command-interface.service';
 import { ArchitectureModels, MachineLearningService } from './services/machine-learning/machine-learning.service';
+import { SignalProcessingService } from './services/signal-processing/signal-processing.service';
 
 @Injectable({
   providedIn: 'root'
@@ -13,6 +14,7 @@ export class CommandTreeService {
   constructor(
     private cis: CommandInterfaceService,
     private mls: MachineLearningService,
+    private sps: SignalProcessingService,
     private storage: LocalStorageService,
     private simulation: EegSimulationService
   ) {}
@@ -209,7 +211,43 @@ export class CommandTreeService {
             },
         ],
     },
-  
+    {
+        type: CommandType.COMMAND,
+        name: ["gram"],
+        expected: [
+            {
+                params: [],
+                description: "Trains a model using the default settings.",
+                callback: () => {
+                    let c = document.getElementById("myCanvas") as any;
+                    let ctx = c.getContext("2d");
+
+                    console.log(ctx);
+
+                    let sample = this.sps.preprocessesData("A01T0, 50");
+                    console.log(sample)
+
+                    function drawToCanvas(sample) {
+
+                        for ( let i=0; i<22*36; i++ ) {
+                            let y = Math.floor(i / 36);
+                            let x = i % 36;
+
+                            // console.log(x, y);
+
+                            ctx.beginPath();
+                            // ctx.lineWidth = "6";
+                            // ctx.strokeStyle = "red";
+                            let colorValue = sample[i] * 255 / 5;
+                            // console.log(colorValue);
+                            ctx.fillStyle = `rgb(${colorValue}, ${colorValue}, ${colorValue})`;
+                            ctx.fillRect(10*x, 10*y, 10, 10);
+                        }
+                    }
+                }
+            }
+        ]
+    },
   
   
     // Remote Functions

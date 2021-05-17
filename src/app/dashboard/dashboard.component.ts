@@ -24,6 +24,8 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     console.log("Initialised");
 
+    
+
     // Promise.all([
     //   this.mls.loadModel(),
     //   this.http.get("./assets/resources/data/A01T/json/A01T-training-S100.json").toPromise()

@@ -155,7 +155,7 @@ export class SignalProcessingService {
     })
   }
 
-  async preprocessesData(id: string, mls: MachineLearningService, skips:number=50) {
+  async preprocessesData(id: string, skips:number=50, mls?: MachineLearningService) {
 
     console.log(id);
 
@@ -241,30 +241,13 @@ export class SignalProcessingService {
     }
 
     console.log(bounds);
+    
+    let starting = 0;
+    if ( !mls ) {
+      starting = Math.floor(stimData.length * Math.random());
+    }
 
-    // function drawToCanvas(sample) {
-    //   // let max = sample.inputs.reduce((acc, val) => acc > val ? acc : val, 0);
-    //   // let max = 5;
-    //   // console.log(max);
-
-    //   for ( let i=0; i<22*36; i++ ) {
-    //     let y = Math.floor(i / 36);
-    //     let x = i % 36;
-
-    //     // console.log(x, y);
-
-    //     ctx.beginPath();
-    //     // ctx.lineWidth = "6";
-    //     // ctx.strokeStyle = "red";
-    //     let colorValue = sample[i] * 255 / 5;
-    //     // console.log(colorValue);
-    //     ctx.fillStyle = `rgb(${colorValue}, ${colorValue}, ${colorValue})`;
-    //     ctx.fillRect(10*x, 10*y, 10, 10);
-    //   }
-    // }
-
-
-    for (let i_1 = 0; i_1 < stimData.length; i_1++) {
+    for (let i_1 = starting; i_1 < stimData.length; i_1++) {
       if (stimData[i_1].code == EventType.StartOfTrial) {
 
         let stims = stimCodes.slice(lastSpliceIndex + 1, i_1);
@@ -292,25 +275,9 @@ export class SignalProcessingService {
           console.log("Length: " + (eegSegment[0].length));
           console.log(stims);
 
-          // let trainingData = [];
-
           for (let j = 0; j < eegSegment[0].length - this.FREQUENCY_WINDOW; j+=skips) {
             let obj = this;
 
-            // console.log(eegSegment);
-
-            // let inputs = eegSegment
-            //   .map(channel => channel.slice(j, j + this.FREQUENCY_WINDOW))
-            //   .map((channel, index) => obj.generateGramianAngularFields(channel))
-            //   .reduce((acc, val) => [...acc, ...val], []);
-
-            // inputs = [...inputs];
-            
-            // console.log(input);
-
-            // this.generateGramianAngularFields(eegSegment[0]);
-
-            // return Promise.resolve();;
             let inputs = eegSegment
               .map(channel => channel.slice(j, j + this.FREQUENCY_WINDOW))
               .map((channel, index) => obj.getFrequencies(channel).map(datum => {
@@ -339,7 +306,9 @@ export class SignalProcessingService {
               outputs = [0, 0, 0, 0, 1]; // Idle
             }
 
-            // drawToCanvas(inputs);
+            if ( !mls ) {
+              return {inputs, outputs};
+            }
 
             trainingData.push({ inputs, outputs });
           }
@@ -350,6 +319,10 @@ export class SignalProcessingService {
 
       }
       console.log(Math.round(100 * (i_1 + 1) / stimData.length) + "% Complete");
+    }
+
+    if ( !mls ) {
+      return this.preprocessesData(id, skips);
     }
 
     console.log(bounds);
@@ -385,16 +358,20 @@ export class SignalProcessingService {
 
     // shuffle(trainingData);
 
-    let trainingFraction = 0.8;
-    let fractionIndex = Math.round(trainingFraction * trainingData.length);
+    if ( mls ) {
+      let trainingFraction = 0.8;
+      let fractionIndex = Math.round(trainingFraction * trainingData.length);
 
-    let training = trainingData.slice(0, fractionIndex);
-    let validation = trainingData.slice(fractionIndex, trainingData.length);
+      let training = trainingData.slice(0, fractionIndex);
+      let validation = trainingData.slice(fractionIndex, trainingData.length);
 
-    await mls.train(training, validation, (log) => {
-      // console.log("Working!");
-      history.push(log);
-    });
+      await mls.train(training, validation, (log) => {
+        // console.log("Working!");
+        history.push(log);
+      });
+    }
+
+    
     
 
     // await mls.saveModel("model");

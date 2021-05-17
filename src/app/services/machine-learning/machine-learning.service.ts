@@ -25,7 +25,7 @@ export class MachineLearningService {
   ) {
     console.log(bci);
 
-    this.modelType = storage.get("model-type", ArchitectureModels.CONVOLUTIONAL);
+    this.modelType = storage.get("model-type", ArchitectureModels.CONVOLUTIONAL); 
   }
 
 
@@ -41,12 +41,6 @@ export class MachineLearningService {
     csv.unshift(header.join(','));
     let csvArray = csv.join('\r\n');
 
-    // console.log(csv);
-    // console.log(header);
-    // console.log(csvArray);
-
-    // var blob = new Blob([csvArray], {type: 'text/csv' })
-    // saveAs(blob, "myFile.csv");
     const a = document.createElement('a');
     const blob = new Blob([csvArray], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -226,7 +220,7 @@ export class MachineLearningService {
 
     let history = [];
     for ( let subject of subjects ) {
-      let data = await this.sps.preprocessesData(subject, this, skips);
+      let data = await this.sps.preprocessesData(subject, skips, this);
       history.push(data);
     }
 
