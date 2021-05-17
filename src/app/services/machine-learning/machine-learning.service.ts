@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 // import { saveAs } from 'file-saver/FileSaver';
 
 import * as tf from '@tensorflow/tfjs';
+import { LocalStorageService } from 'src/app/local-storage.service';
 // import { Globals } from './globals';
 // import * as bci from 'bcijs/browser.js'
 import { SignalProcessingService, TrainingData } from '../signal-processing/signal-processing.service';
@@ -15,11 +16,16 @@ export class MachineLearningService {
 
   model: tf.Sequential;
 
+  modelType: ArchitectureModels;
+
   constructor(
     private http: HttpClient,
     private sps: SignalProcessingService,
+    private storage: LocalStorageService
   ) {
     console.log(bci);
+
+    this.modelType = storage.get("model-type", ArchitectureModels.CONVOLUTIONAL);
   }
 
 
@@ -118,7 +124,7 @@ export class MachineLearningService {
   }
 
   createDenseModel() {
-
+    const model = tf.sequential();
   }
 
   createConvolutionalModel() {
@@ -129,100 +135,53 @@ export class MachineLearningService {
     const IMAGE_HEIGHT = 36;
     const IMAGE_CHANNELS = 1;  
     
-    // model.add(tf.layers.conv2d({
-    //   inputShape: [22, 36, 1],
-    //   kernelSize: 1,
-    //   filters: 1,
-    //   strides: 1,
-    //   // kernelRegularizer: tf.regularizers.l2(),
-    //   activation: 'relu',
-    //   kernelInitializer: 'varianceScaling'
-    // }));
+    model.add(tf.layers.conv2d({
+      inputShape: [22, 36, 1],
+      kernelSize: 2,
+      filters: 1,
+      strides: 1,
+      // kernelRegularizer: tf.regularizers.l2(),
+      activation: 'relu',
+      kernelInitializer: 'varianceScaling'
+    }));
 
-    // model.add(tf.layers.conv2d({
-    //   inputShape: [18, 32, 4],
-    //   kernelSize: 1,
-    //   filters: 1,
-    //   strides: 1,
-    //   // kernelRegularizer: tf.regularizers.l2(),
-    //   activation: 'relu',
-    //   kernelInitializer: 'varianceScaling'
-    // }));
+    model.add(tf.layers.conv2d({
+      inputShape: [18, 32, 4],
+      kernelSize: 2,
+      filters: 2,
+      strides: 1,
+      // kernelRegularizer: tf.regularizers.l2(),
+      activation: 'relu',
+      kernelInitializer: 'varianceScaling'
+    }));
 
-    // model.add(tf.layers.conv2d({
-    //   inputShape: [14, 28, 4],
-    //   kernelSize: 1,
-    //   filters: 1,
-    //   strides: 1,
-    //   // kernelRegularizer: tf.regularizers.l2(),
-    //   activation: 'relu',
-    //   kernelInitializer: 'varianceScaling'
-    // }));
+    model.add(tf.layers.conv2d({
+      inputShape: [14, 28, 4],
+      kernelSize: 2,
+      filters: 5,
+      strides: 1,
+      // kernelRegularizer: tf.regularizers.l2(),
+      activation: 'relu',
+      kernelInitializer: 'varianceScaling'
+    }));
 
-    // model.add(tf.layers.conv2d({
-    //   // inputShape: [22, 36, 1],
-    //   kernelSize: 5,
-    //   filters: 8,
-    //   strides: 1,
-    //   // kernelRegularizer: tf.regularizers.l2(),
-    //   activation: 'relu',
-    //   kernelInitializer: 'varianceScaling'
-    // }));
 
-    // model.add(tf.layers.batchNormalization());
+    model.add(tf.layers.batchNormalization());
 
-    // model.add(tf.layers.maxPooling2d({poolSize: [1, 2], strides: [1, 1]}));
-
-    // model.add(tf.layers.reshape({targetShape: [12, 33, 2]}))
-  
-
-    // model.add(tf.layers.maxPooling2d({poolSize: [2, 2], strides: [2, 2]}));
-
-    // model.add(tf.layers.reshape({targetShape: [8, 11, 9]}))
-  
-    // model.add(tf.layers.conv2d({
-    //   inputShape: [7, 14, 16],
-    //   kernelSize: 5,
-    //   filters: 16,
-    //   strides: 2,
-    //   kernelRegularizer: tf.regularizers.l1(),
-    //   activation: 'relu',
-    //   // kernelInitializer: 'varianceScaling'
-    // }));
-
+    model.add(tf.layers.maxPooling2d({poolSize: [1, 2], strides: [1, 1]}));
     
-    // model.add(tf.layers.flatten());
+    model.add(tf.layers.flatten());
   
     // Our last layer is a dense layer which has 10 output units, one for each
     // output class (i.e. 0, 1, 2, 3, 4, 5, 6, 7, 8, 9).
     // const NUM_OUTPUT_CLASSES = 3;
     model.add(tf.layers.dense({
-      // inputShape: [792],
       units: 792,
       // kernelRegularizer: tf.regularizers.l2(),
       // kernelInitializer: 'varianceScaling',
       activation: 'sigmoid',
       useBias: true
     }));
-
-    // model.add(tf.layers.dense({
-    //   units: 792,
-    //   // kernelRegularizer: tf.regularizers.l2(),
-    //   // kernelInitializer: 'varianceScaling',
-    //   activation: 'sigmoid',
-    //   useBias: true
-    // }));
-
-    
-
-    // model.add(tf.layers.dense({
-    //   units: 792,
-    //   // kernelRegularizer: tf.regularizers.l1(),
-    //   // kernelInitializer: 'varianceScaling',
-    //   activation: 'sigmoid'
-    // }));
-
-    // model.add(tf.layers.reshape({targetShape: [128]}))
 
     model.add(tf.layers.dense({
       units: 128,
@@ -231,15 +190,6 @@ export class MachineLearningService {
       activation: 'sigmoid',
       useBias: true
     }));
-
-    // model.add(tf.layers.dense({
-    //   units: 64,
-    //   kernelRegularizer: tf.regularizers.l1(),
-    //   // kernelInitializer: 'varianceScaling',
-    //   activation: 'sigmoid'
-    // }));
-
-    // model.add(tf.layers.reshape({targetShape: [3]}))
 
     model.add(tf.layers.dense({
       units: 5,
@@ -266,7 +216,7 @@ export class MachineLearningService {
 
   }
 
-  async fullTrainingSequence(ctx: any, id: string = "1", skips: number = 50, notes: string = "#") {
+  async fullTrainingSequence(id: string = "1", skips: number = 50, notes: string = "#") {
 
     let subjects = ["A01T", "A02T", "A03T", "A04T", "A05T", "A06T", "A07T", "A08T", "A09T"];
     subjects = [`A0${id}T`];
@@ -276,11 +226,11 @@ export class MachineLearningService {
 
     let history = [];
     for ( let subject of subjects ) {
-      let data = await this.sps.preprocessesData(subject, this, ctx, skips);
+      let data = await this.sps.preprocessesData(subject, this, skips);
       history.push(data);
     }
 
-    let stringAppend = `-${id}_J${skips}_${notes}`
+    let stringAppend = `-${id}_J${skips}_${this.modelType}_${notes}`
     
     console.log(history);
     this.sps.downloadJSON(this.model, "Mod"+stringAppend);
@@ -451,4 +401,9 @@ export class MachineLearningService {
       callbacks: {onEpochEnd}
     });
   }
+}
+
+export enum ArchitectureModels {
+  DENSE = "DENSE",
+  CONVOLUTIONAL = "CONVOLUTIONAL"
 }

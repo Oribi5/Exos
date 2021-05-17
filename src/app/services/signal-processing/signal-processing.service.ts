@@ -155,7 +155,7 @@ export class SignalProcessingService {
     })
   }
 
-  async preprocessesData(id: string, mls: MachineLearningService, ctx: any, skips:number=50) {
+  async preprocessesData(id: string, mls: MachineLearningService, skips:number=50) {
 
     console.log(id);
 

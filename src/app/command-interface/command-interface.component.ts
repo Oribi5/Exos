@@ -84,7 +84,7 @@ export class CommandInterfaceComponent implements OnInit {
 
       console.log(subDirectory)
       
-      if ( subDirectory.length == 0) return;
+      if ( subDirectory.length == 0) break;
 
       switch ( subDirectory[0].type ) {
         case CommandType.NAMESPACE: root = (subDirectory[0] as CommandNameSpaceInterface).dir; break;
@@ -92,21 +92,24 @@ export class CommandInterfaceComponent implements OnInit {
           let args = cmdArray.slice(i+1, cmdArray.length)
           let methods = (subDirectory[0] as CommandMethodInterface)
 
-          console.log("args");
-          console.log(args);
-          console.log(methods);
+          // console.log("args");
+          // console.log(args);
+          // console.log(methods);
 
           let identicalMethods = methods.expected.filter(method => method.params.length == args.length);
 
-          console.log(identicalMethods)
+          // console.log(identicalMethods)
 
           if ( identicalMethods.length != 0 )
             identicalMethods[0].callback(args);
+            return;
           
           // let arguments = 
         }
       }
     }
+
+    console.error("No method found.");
 
     return;
   }
@@ -120,7 +123,7 @@ export class CommandInterfaceComponent implements OnInit {
     let cmdArray = this.cmd.split(" ");
     let partialComplete = cmdArray.pop();
 
-    if (partialComplete.length == 0) return;
+    // if (partialComplete.length == 0) return;
 
     for ( let i=0; i<cmdArray.length; i++ ) {
       let str = cmdArray[i];
@@ -167,9 +170,13 @@ export class CommandInterfaceComponent implements OnInit {
     }
   }
 
+  getHelp(): void {
+
+  }
+
   execute(): void {
 
-    this.executeMethod()
+    
 
     var c = document.getElementById("myCanvas") as any;
         var ctx = c.getContext("2d");
@@ -182,45 +189,51 @@ export class CommandInterfaceComponent implements OnInit {
       return;
     }
 
-    console.log(this.cmd);
+    this.executeMethod()
+
+    // console.log(this.cmd);
     this.logs.push(this.cmd);
     this.cmdLog.push(this.cmd);
 
-    let commandArray = this.cmd.split(" ");
-    if ( commandArray.length > 1 && commandArray[0] == "remote" ) {
-      commandArray.shift();
-      let remoteCommand = commandArray.join(" ");
-      let cmdObservable = this.cis.sendRemoteCommand(remoteCommand)
+    // let commandArray = this.cmd.split(" ");
 
-      this.log(cmdObservable);
-    }
+    this.cmd = "";
 
-    if ( commandArray.length >= 1 && commandArray[0] == "load" ) {
-      let ids = commandArray.splice(1, commandArray.length)
-      for ( let id of ids ) {
-        console.log(id);
-        this.sps.preprocessesData(id, this.mls, ctx);
-      }
-    }
+    return;
+    // if ( commandArray.length > 1 && commandArray[0] == "remote" ) {
+    //   commandArray.shift();
+    //   let remoteCommand = commandArray.join(" ");
+    //   let cmdObservable = this.cis.sendRemoteCommand(remoteCommand)
 
-    if ( commandArray.length >= 1 && commandArray[0] == "stop" ) {
-      this.mls.model.stopTraining = true;
-    }
+    //   this.log(cmdObservable);
+    // }
 
-    if ( commandArray.length >= 1 && commandArray[0] == "train" ) {
-      if ( commandArray.length >= 2 ) {
-        // this.mls.fullTrainingSequence(commandArray[1] == "fromLoad");
-        let name = commandArray[1];
-        let skips = parseInt(commandArray[2]);
-        let notes = commandArray[3];
-        this.mls.fullTrainingSequence(ctx, name, skips, notes);
+    // if ( commandArray.length >= 1 && commandArray[0] == "load" ) {
+    //   let ids = commandArray.splice(1, commandArray.length)
+    //   for ( let id of ids ) {
+    //     console.log(id);
+    //     this.sps.preprocessesData(id, this.mls, ctx);
+    //   }
+    // }
 
-      } else {
+    // if ( commandArray.length >= 1 && commandArray[0] == "stop" ) {
+    //   this.mls.model.stopTraining = true;
+    // }
+
+    // if ( commandArray.length >= 1 && commandArray[0] == "train" ) {
+    //   if ( commandArray.length >= 2 ) {
+    //     // this.mls.fullTrainingSequence(commandArray[1] == "fromLoad");
+    //     let name = commandArray[1];
+    //     let skips = parseInt(commandArray[2]);
+    //     let notes = commandArray[3];
+    //     this.mls.fullTrainingSequence(name, skips, notes);
+
+    //   } else {
         
-        this.mls.fullTrainingSequence(ctx);
-      }
+    //     this.mls.fullTrainingSequence();
+    //   }
       
-    }
+    // }
       
     this.cmd = "";
   }

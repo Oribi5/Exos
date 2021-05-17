@@ -1,5 +1,9 @@
 import { Injectable } from '@angular/core';
+import { callbacks } from '@tensorflow/tfjs-layers';
+import { EegSimulationService } from './eeg-simulation.service';
+import { LocalStorageService } from './local-storage.service';
 import { CommandInterfaceService } from './services/command-interface/command-interface.service';
+import { ArchitectureModels, MachineLearningService } from './services/machine-learning/machine-learning.service';
 
 @Injectable({
   providedIn: 'root'
@@ -7,7 +11,10 @@ import { CommandInterfaceService } from './services/command-interface/command-in
 export class CommandTreeService {
 
   constructor(
-    public cis: CommandInterfaceService
+    private cis: CommandInterfaceService,
+    private mls: MachineLearningService,
+    private storage: LocalStorageService,
+    private simulation: EegSimulationService
   ) {}
 
   readonly CommandTree: CommandBranchInterface[] = [
@@ -124,12 +131,83 @@ export class CommandTreeService {
     {
         type: CommandType.NAMESPACE,
         name: ["ml", "ai"],
-        dir: [],
+        dir: [
+            {
+                type: CommandType.COMMAND,
+                name: ["train"],
+                expected: [
+                    {
+                        params: ["userNumber", "skips", "notes"],
+                        description: "Trains a model using the default settings.",
+                        callback: ([userNumber, skips, notes]) => {
+                            console.log({userNumber, skips, notes});
+                            this.mls.fullTrainingSequence(userNumber, skips, notes)
+                        }
+                    }
+                ]
+            },
+            {
+                type: CommandType.COMMAND,
+                name: ["mode"],
+                expected: [
+                    {
+                        params: [],
+                        description: "Get machine learning mode.",
+                        callback: () => {
+                            console.log(this.mls.modelType);
+                        }
+                    }
+                ]
+            },
+            {
+                type: CommandType.COMMAND,
+                name: ["toggleMode"],
+                expected: [
+                    {
+                        params: [],
+                        description: "Toggles analysis mode.",
+                        callback: () => {
+                            if ( this.mls.modelType === ArchitectureModels.CONVOLUTIONAL ) {
+                                this.mls.modelType = ArchitectureModels.DENSE;
+                            } else {
+                                this.mls.modelType = ArchitectureModels.CONVOLUTIONAL;
+                            }
+                            this.storage.set("model-type", this.mls.modelType);
+                            console.log(`Mode set to ${this.mls.modelType}`);
+                        }
+                    }
+                ]
+            },
+        ],
     },
     {
         type: CommandType.NAMESPACE,
         name: ["simulate", "sim"],
-        dir: [],
+        dir: [
+            {
+                type: CommandType.COMMAND,
+                name: ["start", "begin"],
+                expected: [
+                    {
+                        params: [],
+                        description: "Start EEG simulation.",
+                        callback: () => {
+                            this.simulation.start();
+                            let obj = this;
+                            
+                            let interval = setInterval(() => {
+                                let response = obj.simulation.get(2000);
+                                console.log(response);
+                                
+                                if ( response == null ) {
+                                    clearInterval(interval);
+                                }
+                            }, 500);
+                        }
+                    }
+                ]
+            },
+        ],
     },
   
   
