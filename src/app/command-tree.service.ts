@@ -218,31 +218,31 @@ export class CommandTreeService {
             {
                 params: [],
                 description: "Trains a model using the default settings.",
-                callback: () => {
+                callback: async () => {
                     let c = document.getElementById("myCanvas") as any;
                     let ctx = c.getContext("2d");
 
                     console.log(ctx);
 
-                    let sample = this.sps.preprocessesData("A01T0, 50");
-                    console.log(sample)
+                    let { inputs, outputs } = await this.sps.preprocessesData("A01T", 50);
+                    console.log(inputs)
+                    console.log(outputs);
 
-                    function drawToCanvas(sample) {
+                    let sample = inputs;
 
-                        for ( let i=0; i<22*36; i++ ) {
-                            let y = Math.floor(i / 36);
-                            let x = i % 36;
+                    for ( let i=0; i<22*36; i++ ) {
+                        let y = Math.floor(i / 36);
+                        let x = i % 36;
 
-                            // console.log(x, y);
+                        // console.log(x, y);
 
-                            ctx.beginPath();
-                            // ctx.lineWidth = "6";
-                            // ctx.strokeStyle = "red";
-                            let colorValue = sample[i] * 255 / 5;
-                            // console.log(colorValue);
-                            ctx.fillStyle = `rgb(${colorValue}, ${colorValue}, ${colorValue})`;
-                            ctx.fillRect(10*x, 10*y, 10, 10);
-                        }
+                        ctx.beginPath();
+                        // ctx.lineWidth = "6";
+                        // ctx.strokeStyle = "red";
+                        let colorValue = sample[i] * 255 / 3;
+                        // console.log(colorValue);
+                        ctx.fillStyle = `rgb(${colorValue}, ${colorValue}, ${colorValue})`;
+                        ctx.fillRect(10*x, 10*y, 10, 10);
                     }
                 }
             }
