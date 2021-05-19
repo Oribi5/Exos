@@ -121,18 +121,20 @@ export class MachineLearningService {
     const model = tf.sequential();
   }
 
+  size = 32;
+
   createConvolutionalModel() {
     // return this.generateModel2();
     const model = tf.sequential();
     
-    const IMAGE_WIDTH = 22;
-    const IMAGE_HEIGHT = 36;
-    const IMAGE_CHANNELS = 1;  
+    // const IMAGE_WIDTH = 22;
+    // const IMAGE_HEIGHT = 36;
+    // const IMAGE_CHANNELS = 1;  
     
     model.add(tf.layers.conv2d({
-      inputShape: [22, 36, 1],
-      kernelSize: 2,
-      filters: 1,
+      inputShape: [this.size, this.size, 22],
+      kernelSize: 3,
+      filters: 32,
       strides: 1,
       // kernelRegularizer: tf.regularizers.l2(),
       activation: 'relu',
@@ -140,20 +142,20 @@ export class MachineLearningService {
     }));
 
     model.add(tf.layers.conv2d({
-      inputShape: [18, 32, 4],
-      kernelSize: 2,
-      filters: 2,
-      strides: 1,
+      // inputShape: [18, 32, 4],
+      kernelSize: 3,
+      filters: 32,
+      strides: 2,
       // kernelRegularizer: tf.regularizers.l2(),
       activation: 'relu',
       kernelInitializer: 'varianceScaling'
     }));
 
     model.add(tf.layers.conv2d({
-      inputShape: [14, 28, 4],
-      kernelSize: 2,
-      filters: 5,
-      strides: 1,
+      // inputShape: [14, 28, 4],
+      kernelSize: 3,
+      filters: 64,
+      strides: 2,
       // kernelRegularizer: tf.regularizers.l2(),
       activation: 'relu',
       kernelInitializer: 'varianceScaling'
@@ -162,7 +164,7 @@ export class MachineLearningService {
 
     model.add(tf.layers.batchNormalization());
 
-    model.add(tf.layers.maxPooling2d({poolSize: [1, 2], strides: [1, 1]}));
+    model.add(tf.layers.maxPooling2d({poolSize: [2, 2], strides: [1, 1]}));
     
     model.add(tf.layers.flatten());
   
@@ -170,7 +172,7 @@ export class MachineLearningService {
     // output class (i.e. 0, 1, 2, 3, 4, 5, 6, 7, 8, 9).
     // const NUM_OUTPUT_CLASSES = 3;
     model.add(tf.layers.dense({
-      units: 792,
+      units: 30037,
       // kernelRegularizer: tf.regularizers.l2(),
       // kernelInitializer: 'varianceScaling',
       activation: 'sigmoid',
@@ -178,12 +180,20 @@ export class MachineLearningService {
     }));
 
     model.add(tf.layers.dense({
-      units: 128,
+      units: 347,
       // kernelRegularizer: tf.regularizers.l2(),
       // kernelInitializer: 'varianceScaling',
       activation: 'sigmoid',
       useBias: true
     }));
+
+    // model.add(tf.layers.dense({
+    //   units: 20,
+    //   // kernelRegularizer: tf.regularizers.l2(),
+    //   // kernelInitializer: 'varianceScaling',
+    //   activation: 'sigmoid',
+    //   useBias: true
+    // }));
 
     model.add(tf.layers.dense({
       units: 5,
@@ -220,7 +230,7 @@ export class MachineLearningService {
 
     let history = [];
     for ( let subject of subjects ) {
-      let data = await this.sps.preprocessesData(subject, skips, this);
+      let data = await this.sps.preprocessesData2(subject, skips, this);
       history.push(data);
     }
 
@@ -355,14 +365,14 @@ export class MachineLearningService {
   
     const [trainXs, trainYs] = tf.tidy(() => {
       return [
-        tf.tensor(trainingInput, [TRAIN_DATA_SIZE, 22, 36, 1]),
+        tf.tensor(trainingInput, [TRAIN_DATA_SIZE, this.size, this.size, 22]),
         tf.tensor(trainingOutput, [TRAIN_DATA_SIZE, 5])
       ];
     });
   
     const [testXs, testYs] = tf.tidy(() => {
       return [
-        tf.tensor(testData.map(value => value.inputs), [TEST_DATA_SIZE, 22, 36, 1]),
+        tf.tensor(testData.map(value => value.inputs), [TEST_DATA_SIZE, this.size, this.size, 22]),
         tf.tensor(testData.map(value => value.outputs), [TEST_DATA_SIZE, 5])
       ];
     });
@@ -390,7 +400,7 @@ export class MachineLearningService {
     return this.model.fit(trainXs, trainYs, {
       batchSize: 32,
       validationData: [testXs, testYs],
-      epochs: 200,
+      epochs: 500,
       shuffle: true,
       callbacks: {onEpochEnd}
     });

@@ -380,6 +380,253 @@ export class SignalProcessingService {
     return history;
   }
 
+  async preprocessesData2(id: string, skips:number=50, mls?: MachineLearningService) {
+
+    console.log(id);
+
+    // Load data files
+    let root = `assets/resources/data/${id}`;
+
+    const eegData = await Promise.all([
+      this.http.get(`${root}/eeg.csv`,
+        { responseType: "text" }).toPromise()
+        .then(result => {
+          console.log("EEG LOADED");
+          return result;
+        }),
+
+      this.http.get(`${root}/stim-code.csv`,
+        { responseType: "text" }).toPromise()
+        .then(result_1 => {
+          console.log("STIM CODES LOADED");
+          return result_1;
+        }),
+
+      this.http.get(`${root}/stim-pos.csv`,
+        { responseType: "text" }).toPromise()
+        .then(result_2 => {
+          console.log("STIM POS LOADED");
+          return result_2;
+        }),
+    ]);
+    let [eeg_txt, stimCodes_txt, stimPositions_txt] = eegData;
+
+    let stimCodes = stimCodes_txt.split(",").map(val => parseFloat(val)),
+      stimPositions = stimPositions_txt.split(",").map(val_1 => parseFloat(val_1)),
+      eeg = eeg_txt.split("\n")
+        .map(line => line.split(",").map(str => parseFloat(str))
+        );
+
+    // Transpose EEG's 22 (cut 23, 24, & 25 EOG channels)
+    let channels = [];
+    for (let i = 0; i < 22; i++) {
+      channels.push(eeg.map(channels_1 => channels_1[i]));
+    }
+
+    eeg = channels;
+    channels = null;
+
+    console.log(stimCodes, stimPositions);
+    console.log(eeg);
+
+    let stimData: Stim[] = stimCodes.map((code, index) => {
+      return {
+        code: code,
+        position: stimPositions[index]
+      };
+    });
+
+    // --------------- Configure data.js ---------------
+    let dataObject = {
+      name: id,
+      date: Date.now(),
+      duration: eeg[0].length / this.SAMPLING_RATE,
+      eeg: eeg,
+      stim: stimData
+    };
+
+    // this.downloadJSON(dataObject, `${id}-eeg`);
+    // --------------- Configure data-training.js ---------------
+    let lastSplicePosition = 0;
+    let lastSpliceIndex = -1;
+
+    let set = 0;
+
+    // let data = [];
+    let trainingData = [];
+
+    let history = [];
+
+    let bounds = Array(22);
+    for ( let i=0; i<bounds.length; i++ ) {
+      bounds[i] = {
+        min: Infinity,
+        max: -Infinity
+      };
+    }
+
+    console.log(bounds);
+    
+    let starting = 0;
+    if ( !mls ) {
+      starting = Math.floor(stimData.length * Math.random());
+    }
+
+    for (let i_1 = starting; i_1 < stimData.length; i_1++) {
+      if (stimData[i_1].code == EventType.StartOfTrial) {
+
+        let stims = stimCodes.slice(lastSpliceIndex + 1, i_1);
+
+        // Filter
+        let validTrial = [
+          EventType.CueOnset_Unknown,
+          // EventType.CueOnset_Tongue,
+          // EventType.CueOnset_Foot,
+          EventType.RejectTrial
+        ].reduce((acc, val_2) => {
+          return !stims.includes(val_2) && acc;
+        }, true);
+
+        if (validTrial) {
+          set++;
+
+          //Extract data from 3 - 5 seconds
+          let startOffset = 3000;
+          let length = 2000;
+
+          let startIndex = lastSplicePosition + startOffset;
+
+          let eegSegment = eeg.map(channel => channel.slice(startIndex, startIndex + length));
+          console.log("Length: " + (eegSegment[0].length));
+          console.log(stims);
+
+          let window = 32;
+
+          for (let j = 0; j < eegSegment[0].length - window; j+=skips) {
+            let obj = this;
+
+            let inputs = eegSegment
+              .map(channel => channel.slice(j, j + window))
+              .map((channel, index) => obj.generateGramianAngularFields(channel).map(datum => {
+                // console.log(datum);
+                // Update channel bounds
+                // let val = datum.value;
+                // bounds[index].min = Math.min(bounds[index].min, val);
+                // bounds[index].max = Math.max(bounds[index].max, val);
+
+                return datum;
+              }));
+            
+            //Invert array from 22 * 128 * 128 -> 128 * 128 * 22
+
+            let invertedInput = [];
+            for ( let y=0; y<window; y++ ) {
+              invertedInput[y] = [];
+              for ( let x=0; x<window; x++ ) {
+                invertedInput[y][x] = [];
+                for ( let k=0; k<22; k++ ) {
+                  invertedInput[y][x][k] = inputs[k][y][x];
+                }
+              }
+            }
+
+            inputs = invertedInput;
+
+
+            // .reduce((acc_1, val_3) => [...acc_1, ...val_3], []);
+
+            // Concat channels to singular input array
+            // let inputs = [...frequencies];
+            let outputs: number[];
+
+            if (stims.includes(EventType.CueOnset_Left)) {
+              outputs = [1, 0, 0, 0, 0]; // Left 
+            } else if (stims.includes(EventType.CueOnset_Right)) {
+              outputs = [0, 1, 0, 0, 0]; // Right
+            } else if (stims.includes(EventType.CueOnset_Foot)) {
+              outputs = [0, 0, 1, 0, 0]; // Foot
+            } else if (stims.includes(EventType.CueOnset_Tongue)) {
+              outputs = [0, 0, 0, 1, 0]; // Tongue
+            } else {
+              outputs = [0, 0, 0, 0, 1]; // Idle
+            }
+
+            if ( !mls ) {
+              return {inputs, outputs};
+            }
+
+            trainingData.push({ inputs, outputs });
+
+            console.log({inputs, outputs})
+          }
+        }
+
+        lastSplicePosition = stimData[i_1].position;
+        lastSpliceIndex = i_1;
+
+      }
+      console.log(Math.round(100 * (i_1 + 1) / stimData.length) + "% Complete");
+    }
+
+    if ( !mls ) {
+      return this.preprocessesData(id, skips);
+    }
+
+    console.log(bounds);
+
+    // trainingData.forEach(set => {
+    //   set.inputs = set.inputs.map((val, index) => {
+    //     let i = Math.floor(index / 36); 
+    //     // console.log(i);
+    //     return (val - bounds[i].min)/bounds[i].max;
+    //   });
+    // });
+
+    console.log(trainingData)
+
+    // function shuffle(array) {
+    //   let currentIndex = array.length, temporaryValue, randomIndex;
+    
+    //   // While there remain elements to shuffle...
+    //   while (0 !== currentIndex) {
+    
+    //     // Pick a remaining element...
+    //     randomIndex = Math.floor(Math.random() * currentIndex);
+    //     currentIndex -= 1;
+    
+    //     // And swap it with the current element.
+    //     temporaryValue = array[currentIndex];
+    //     array[currentIndex] = array[randomIndex];
+    //     array[randomIndex] = temporaryValue;
+    //   }
+    
+    //   return array;
+    // }
+
+    // shuffle(trainingData);
+
+    if ( mls ) {
+      let trainingFraction = 0.8;
+      let fractionIndex = Math.round(trainingFraction * trainingData.length);
+
+      let training = trainingData.slice(0, fractionIndex);
+      let validation = trainingData.slice(fractionIndex, trainingData.length);
+
+      await mls.train(training, validation, (log) => {
+        // console.log("Working!");
+        history.push(log);
+      });
+    }
+
+    
+    
+
+    // await mls.saveModel("model");
+    console.log(history);
+
+    return history;
+  }
+
   generateGramianAngularFields(signal, summation: boolean = true) {
     // normalise between -1 & 1
     let [min, max] = signal.reduce((acc, val) => {

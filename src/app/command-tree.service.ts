@@ -193,19 +193,20 @@ export class CommandTreeService {
                     {
                         params: [],
                         description: "Start EEG simulation.",
-                        callback: () => {
-                            this.simulation.start();
-                            let obj = this;
-                            
-                            let interval = setInterval(() => {
-                                let response = obj.simulation.get(2000);
-                                console.log(response);
-                                
-                                if ( response == null ) {
-                                    clearInterval(interval);
-                                }
-                            }, 500);
+                        callback: async () => {
+                            await this.simulation.start();
                         }
+                    }
+                ]
+            },
+            {
+                type: CommandType.COMMAND,
+                name: ["stop", "begin"],
+                expected: [
+                    {
+                        params: [],
+                        description: "Ends EEG simulation.",
+                        callback: () => this.simulation.stop()
                     }
                 ]
             },
@@ -213,7 +214,7 @@ export class CommandTreeService {
     },
     {
         type: CommandType.COMMAND,
-        name: ["gram"],
+        name: ["fft"],
         expected: [
             {
                 params: [],
@@ -244,6 +245,73 @@ export class CommandTreeService {
                         ctx.fillStyle = `rgb(${colorValue}, ${colorValue}, ${colorValue})`;
                         ctx.fillRect(10*x, 10*y, 10, 10);
                     }
+                }
+            }
+        ]
+    },
+    {
+        type: CommandType.COMMAND,
+        name: ["gram"],
+        expected: [
+            {
+                params: [],
+                description: "Trains a model using the default settings.",
+                callback: async () => {
+                    let c = document.getElementById("myCanvas") as any;
+                    let ctx = c.getContext("2d");
+
+                    console.log(ctx);
+
+                    let obj = this;
+
+                    let size = 200;
+
+                    let interval = setInterval(function() {
+
+                        if ( !obj.simulation.active ) {
+                            clearInterval(interval);
+                        }
+
+                        let data = obj.simulation.get(size)
+                        .slice(0, 3);
+
+
+                        let inputs = data.map(channel => obj.sps.generateGramianAngularFields(channel) )
+
+                        for ( let y=0; y<size; y++ ) {
+                            for ( let x=0; x<size; x++ ) {
+                                ctx.beginPath();
+                                let color = `rgb(${255*(1+inputs[0][y][x])}, ${255*(1+inputs[1][y][x])}, ${255*(1+inputs[2][y][x])})`;
+                                ctx.fillStyle = color;
+
+                                // console.log(color)
+
+                                let unit = 300/size;
+                                ctx.fillRect(x*unit, y*unit, unit, unit);
+                            }
+                        }
+                    }, 6);
+
+                    
+
+                    
+
+                    
+
+                    // for ( let i=0; i<128*128; i++ ) {
+                    //     let y = Math.floor(i / 36);
+                    //     let x = i % 36;
+
+                    //     // console.log(x, y);
+
+                    //     ctx.beginPath();
+                    //     // ctx.lineWidth = "6";
+                    //     // ctx.strokeStyle = "red";
+                    //     let colorValue = sample[i] * 255 / 3;
+                    //     // console.log(colorValue);
+                    //     ctx.fillStyle = `rgb(${colorValue}, ${colorValue}, ${colorValue})`;
+                        
+                    // }
                 }
             }
         ]
